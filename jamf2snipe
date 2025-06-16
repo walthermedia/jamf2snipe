@@ -571,9 +571,34 @@ def create_snipe_model(payload):
     logging.debug('Calling to create new snipe model type against: {}\nThe payload for the POST request is:{}\nThe request headers can be found near the start of the output.'.format(api_url, payload))
     response = session.post(api_url, headers=snipeheaders, json=payload, verify=user_args.do_not_verify_ssl, hooks={'response': request_handler})
     if response.status_code == 200:
-        jsonresponse = response.json()
-        modelnumbers[jsonresponse['payload']['model_number']] = jsonresponse['payload']['id']
-        return True
+  
+        # Add comprehensive debugging
+        print(f"DEBUG: HTTP Status Code: {response.status_code}")
+        print(f"DEBUG: Response Headers: {response.headers}")
+        print(f"DEBUG: Raw Response Text: {response.text}")
+        
+        # Safe JSON parsing with error handling
+        try:
+            jsonresponse = response.json()
+            print(f"DEBUG: Parsed JSON: {jsonresponse}")
+            print(f"DEBUG: JSON type: {type(jsonresponse)}")
+            if jsonresponse:
+                print(f"DEBUG: JSON keys: {jsonresponse.keys()}")
+            else:
+                print("DEBUG: jsonresponse is None or empty")
+        except Exception as e:
+            print(f"DEBUG: Failed to parse JSON: {e}")
+            jsonresponse = None
+        
+        # Check if we have valid data before accessing it
+        if jsonresponse and 'payload' in jsonresponse and jsonresponse['payload']:
+            modelnumbers[jsonresponse['payload']['model_number']] = jsonresponse['payload']['id']
+        elif jsonresponse and 'model_number' in jsonresponse:
+            # Handle newer API format without 'payload' wrapper
+            modelnumbers[jsonresponse['model_number']] = jsonresponse['id']
+        else:
+            print("ERROR: Unable to extract model information from response")
+            print(f"ERROR: Response was: {jsonresponse}")
     else:
         logging.warning('Error code: {} while trying to create a new model.'.format(response.status_code))
         return False
